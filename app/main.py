@@ -1,9 +1,9 @@
 import timeit
-from app.utils.async_functions import concurrent_ASFT
-from app.utils.excel_functions import write_report
+from app.utils.functions import concurrent_ASFT
+from app.utils.report import write_report
 
-Left = ""
-Right = ""
+Left = "C:/Users/lucas/Desktop/AA2000/data/RGL/RGL RWY 25 L3_230310_110426.pdf"
+Right = "C:/Users/lucas/Desktop/AA2000/data/RGL/RGL RWY 25 R3_230310_112438.pdf"
 
 
 def run_write_report():

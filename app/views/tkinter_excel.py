@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog
-from app.utils.excel_functions import write_report
+from app.utils.report import write_report
 
 import tkinter as tk
 from tkinter import filedialog
@@ -13,17 +13,20 @@ def browse_L_file():
     if L_file:
         L_file_var.set(L_file)
 
+
 def browse_R_file():
     global R_file_var
     R_file = askopenfilename(filetypes=[("PDF Files", "*.pdf")])
     if R_file:
         R_file_var.set(R_file)
 
+
 def browse_output_folder():
     global output_folder_var
     output_folder = filedialog.askdirectory()
     if output_folder:
         output_folder_var.set(output_folder)
+
 
 def generate_report():
     L_file = L_file_var.get()
@@ -37,6 +40,7 @@ def generate_report():
         result_var.set("Informe generado con éxito.")
     else:
         result_var.set("Porfavor completar todos los casilleros.")
+
 
 root = tk.Tk()
 root.title("Report Generator")
