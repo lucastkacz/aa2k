@@ -86,11 +86,11 @@ class ASFT_Data:
 
     @property
     def ice_level(self) -> str:
-        return self.friction_measure_report["Ice Level"][0]
+        return int(self.friction_measure_report["Ice Level"][0])
 
     @property
     def runway_length(self) -> str:
-        return self.friction_measure_report["Runway Length"][0]
+        return int(self.friction_measure_report["Runway Length"][0])
 
     @property
     def location(self) -> str:
@@ -102,7 +102,7 @@ class ASFT_Data:
 
     @property
     def tyre_pressure(self) -> str:
-        return self.friction_measure_report["Tyre Pressure"][0]
+        return float(self.friction_measure_report["Tyre Pressure"][0])
 
     @property
     def water_film(self) -> str:
@@ -110,38 +110,30 @@ class ASFT_Data:
 
     @property
     def average_speed(self) -> str:
-        return self.friction_measure_report["Average Speed"][0]
+        return int(self.friction_measure_report["Average Speed"][0])
 
     @property
     def system_distance(self) -> str:
-        return self.friction_measure_report["System Distance"][0]
+        return float(self.friction_measure_report["System Distance"][0])
 
     @property
     def iata(self) -> str:
-        config = self._get_configuration(
-            self.friction_measure_report["Configuration"][0]
-        )
+        config = self._get_configuration(self.friction_measure_report["Configuration"][0])
         return config.iata
 
     @property
     def numbering(self) -> str:
-        config = self._get_configuration(
-            self.friction_measure_report["Configuration"][0]
-        )
+        config = self._get_configuration(self.friction_measure_report["Configuration"][0])
         return f"{config.numbering:02d}"
 
     @property
     def side(self) -> str:
-        config = self._get_configuration(
-            self.friction_measure_report["Configuration"][0]
-        )
+        config = self._get_configuration(self.friction_measure_report["Configuration"][0])
         return config.side
 
     @property
     def separation(self) -> str:
-        config = self._get_configuration(
-            self.friction_measure_report["Configuration"][0]
-        )
+        config = self._get_configuration(self.friction_measure_report["Configuration"][0])
         return config.separation
 
     @property
@@ -185,9 +177,7 @@ class ASFT_Data:
 
     def _measurements(self) -> pd.DataFrame:
         if self._m is None:
-            m: pd.DataFrame = pd.concat(
-                [table.df for table in self.table[2:]], axis=0, ignore_index=True
-            )
+            m: pd.DataFrame = pd.concat([table.df for table in self.table[2:]], axis=0, ignore_index=True)
             row_index: int = m[(m[0] == "Distance") & (m[1] == "Friction")].index[0]
             columns: pd.Series = m.iloc[row_index, :3]
             values: pd.DataFrame = m.iloc[row_index + 1 : -3, :3]
@@ -197,9 +187,7 @@ class ASFT_Data:
 
     def _get_configuration(self, configuration: str) -> RunwayConfig:
         iata: str = re.findall(r"^[A-Z]{3}", configuration)[0]
-        numbering: int = int(
-            re.findall(r"(?<=RWY)\d{2}|(?<!RWY)\d{2}(?=\s)", configuration)[0]
-        )
+        numbering: int = int(re.findall(r"(?<=RWY)\d{2}|(?<!RWY)\d{2}(?=\s)", configuration)[0])
         temp: str = re.findall(r"[A-Z][0-9]", configuration)[-1]
         side: str = temp[0]
         separation: int = int(temp[1])
@@ -209,9 +197,7 @@ class ASFT_Data:
         return datetime.datetime.strptime(date, format)
 
     def _get_runway(self) -> str:
-        config = self._get_configuration(
-            self.friction_measure_report["Configuration"][0]
-        )
+        config = self._get_configuration(self.friction_measure_report["Configuration"][0])
         numbering = int(config.numbering)
         if numbering == 18:
             return "00-18"
