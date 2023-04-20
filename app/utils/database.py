@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 from openpyxl import load_workbook, Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.worksheet.cell_range import CellRange
@@ -65,7 +65,6 @@ def add_dataframe_to_table(worksheet: Worksheet, table_name: str, data: pd.DataF
     Returns:
         None
     """
-    # make the table as an argument
     table = find_table(worksheet, table_name)
 
     table_range = CellRange(table.ref)
@@ -79,44 +78,41 @@ def add_dataframe_to_table(worksheet: Worksheet, table_name: str, data: pd.DataF
     table.ref = f"A1:{worksheet.cell(row=row_end, column=table_range.max_col).coordinate}"
 
 
-def is_key_present(worksheet: Worksheet, table_name: str, column_header: str, data: pd.DataFrame) -> bool:
+def is_key_present_in_table(
+    worksheet: Worksheet, table_name: str, key_value: str, table_column_name: str = "key"
+) -> bool:
     """
-    Check if the key from the data DataFrame is already present in the specified column of the Excel table.
+    Check if a key value is present in a specified column of a table within a worksheet.
 
     Args:
         worksheet (Worksheet): The openpyxl Worksheet object containing the table.
-        table_name (str): The name of the table to be checked.
-        column_header (str): The header of the column in which the key will be searched for.
-        data (pd.DataFrame): The Pandas DataFrame containing the key to be checked.
+        table_name (str): The name of the table to search in.
+        key_value (str): The key value to search for in the column.
+        column_name (str, optional): The header of the column in which the key will be searched for. Defaults to "key".
+
+    Raises:
+        ValueError: If the specified column is not found in the table.
 
     Returns:
-        bool: True if the key is already present in the table, False otherwise.
+        bool: True if the key value is found in the column, False otherwise.
     """
-    # TODO: make data the dataframe and the column value or make data a pandas series
-    # make only the table as a argument
     table = find_table(worksheet, table_name)
-
-    if table is None:
-        raise ValueError(f"The table '{table_name}' was not found in the worksheet.")
-
     table_range = CellRange(table.ref)
 
-    # Find the index of the specified column
     column_idx = None
     for idx, cell in enumerate(worksheet[table_range.min_row]):
-        if cell.value == column_header:
+        if cell.value == table_column_name:
             column_idx = idx + 1
             break
 
     if column_idx is None:
-        raise ValueError(f"The column with header '{column_header}' was not found in the table.")
+        raise ValueError(f"The column with header '{table_column_name}' was not found in the table.")
 
-    # Check if the key is already present in the table
-    key = data.at[0, column_header]
-    return any(
-        worksheet.cell(row=row, column=column_idx).value == key
-        for row in range(table_range.min_row + 1, table_range.max_row + 1)
-    )
+    for row in range(table_range.min_row + 1, table_range.max_row + 1):
+        cell_value = worksheet.cell(row=row, column=column_idx).value
+        if cell_value == key_value:
+            return True
+    return False
 
 
 def information_table(data: ASFT_Data) -> pd.DataFrame:
@@ -147,20 +143,11 @@ def information_table(data: ASFT_Data) -> pd.DataFrame:
     )
 
 
-def database(file_location: str):
+def database():
     wb = load_excel_workbook("C:/Users/lucas/Desktop/AA2000/db.xlsx", TEMPLATE_PATH)
-    data = ASFT_Data(file_location)
     information_ws: Worksheet = wb["Information"]
-    duplicate = is_key_present(information_ws, "Information", "key", information_table(data))
-    if not duplicate:
-        information_table_df = information_table(data)
-        add_dataframe_to_table(information_ws, "Information", information_table_df)
-    else:
-        print("Duplicate key found. Skipping...")
-
-    wb.save("C:/Users/lucas/Desktop/AA2000/db.xlsx")
+    is_key_present_in_table(information_ws, "InformationTable", "2304181153EZE17L5")
 
 
 if __name__ == "__main__":
-    database("C:/Users/lucas/Desktop/AA2000/data/RGL/RGL RWY 07 R5_230310_121718.pdf")
-    database("C:/Users/lucas/Desktop/AA2000/data/AEP/AEP RWY13  L3_220520_125439.pdf")
+    database()
