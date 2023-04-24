@@ -1,36 +1,30 @@
 import os
 import pandas as pd
-from typing import Optional, Tuple, List
 from openpyxl import load_workbook, Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.worksheet.cell_range import CellRange
 from openpyxl.worksheet.table import Table
 
 from app.models.ASFT_Data import ASFT_Data
+from app.utils.calculations import rolling_average, chainage_table
 
-TEMPLATE_PATH = "C:/Users/lucas/Desktop/AA2000/app/templates/database_template.xlsx"
 
-
-def load_excel_workbook(file_path: str, template_path: Optional[str] = None) -> Workbook:
+def load_excel_workbook(file_path: str) -> Workbook:
     """
-    Load an Excel workbook or a template file if the original file is not found.
+    Load an Excel workbook from a file path.
 
     Args:
-        file_path (str): The path to the Excel file to be loaded.
-        template_path (Optional[str]): The path to a template Excel file to be loaded if the original file is not found.
-                                        Default is None.
+        file_path (str): The file path of the Excel workbook to load.
 
     Returns:
-        Workbook: The loaded Workbook object.
+        Workbook: The openpyxl Workbook object representing the loaded workbook.
 
     Raises:
-        FileNotFoundError: If neither the file_path nor the template_path are found.
+        FileNotFoundError: If the specified file does not exist.
     """
     if os.path.exists(file_path):
         return load_workbook(file_path)
-    if template_path and os.path.exists(template_path):
-        return load_workbook(template_path)
-    raise FileNotFoundError("Neither the file nor the template was found.")
+    raise FileNotFoundError("File not found.")
 
 
 def find_table(worksheet: Worksheet, table_name: str) -> Table:
@@ -47,9 +41,9 @@ def find_table(worksheet: Worksheet, table_name: str) -> Table:
     Raises:
         ValueError: If the table with the specified name is not found in the worksheet.
     """
-    for tbl in worksheet.tables.values():
-        if tbl.displayName == table_name:
-            return tbl
+    for table in worksheet.tables.values():
+        if table.displayName == table_name:
+            return table
     raise ValueError(f"The table '{table_name}' was not found in the worksheet.")
 
 
@@ -66,16 +60,13 @@ def add_dataframe_to_table(worksheet: Worksheet, table_name: str, data: pd.DataF
         None
     """
     table = find_table(worksheet, table_name)
-
     table_range = CellRange(table.ref)
-    row_start = table_range.max_row + 1
-    row_end = row_start + len(data) - 1
 
-    for row_idx, row_data in enumerate(data.values, start=row_start):
+    for row_idx, row_data in enumerate(data.values, start=table_range.max_row + 1):
         for col_idx, cell_value in enumerate(row_data, start=table_range.min_col):
             worksheet.cell(row=row_idx, column=col_idx, value=cell_value)
 
-    table.ref = f"A1:{worksheet.cell(row=row_end, column=table_range.max_col).coordinate}"
+    table.ref = f"{worksheet.cell(row=table_range.min_row, column=table_range.min_col).coordinate}:{worksheet.cell(row=table_range.max_row + len(data), column=table_range.max_col).coordinate}"
 
 
 def is_key_present_in_table(
@@ -133,7 +124,6 @@ def information_table(data: ASFT_Data) -> pd.DataFrame:
             "equipment": [data.equipment],
             "pilot": [data.pilot],
             "ice level": [data.ice_level],
-            "runway length": [data.runway_length],
             "location": [data.location],
             "tyre type": [data.tyre_type],
             "tyre pressure": [data.tyre_pressure],
@@ -143,11 +133,29 @@ def information_table(data: ASFT_Data) -> pd.DataFrame:
     )
 
 
-def database():
-    wb = load_excel_workbook("C:/Users/lucas/Desktop/AA2000/db.xlsx", TEMPLATE_PATH)
-    information_ws: Worksheet = wb["Information"]
-    is_key_present_in_table(information_ws, "InformationTable", "2304181153EZE17L5")
+def measurements_table(data: ASFT_Data, runway_length: int, starting_point: int) -> pd.DataFrame:
+    chainage = chainage_table(runway_length, reversed=False)
+    measurements = data.measurements
+
+    start_index = chainage[chainage["chainage"] == starting_point].index[0]
+
+    measurements["Av. Friction 100m"] = rolling_average(measurements["Friction"])
+
+    for col in measurements.columns:
+        if col not in chainage.columns:
+            chainage[col] = 0
+
+        for i, value in enumerate(measurements[col]):
+            chainage.at[start_index + i, col] = value
+
+    chainage.insert(0, "Key", data.key)
+    return chainage
 
 
-if __name__ == "__main__":
-    database()
+data = ASFT_Data("C:/Users/lucas/Desktop/AA2000/data/EZE/EZE RWY 17 L3_230317_140406.pdf")
+md = measurements_table(data, 3110, 110)
+
+print(md.head(40))
+
+
+# TODO: measurement table for each side. adjust chianage depending on orientation

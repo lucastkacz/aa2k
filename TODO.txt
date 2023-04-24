@@ -1,0 +1,2 @@
+logging
+validate all data, greater than zero, steps dividivbel etc etc
