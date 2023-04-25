@@ -26,6 +26,10 @@ class ASFT_Data:
         self._m: Optional[pd.DataFrame] = None
 
     def __str__(self) -> str:
+        """
+        Returns:
+            AEP 31 BORDE L5_220520_125919
+        """
         return f"{self.filename}"
 
     def __len__(self) -> int:
@@ -34,30 +38,36 @@ class ASFT_Data:
     @property
     def friction_measure_report(self) -> pd.DataFrame:
         """
-           Configuration      Date and Time  Type Equipment  Pilot Ice Level  ... Location Tyre Type Tyre Pressure Water Film Average Speed System Distance
-        0  RGL RWY 07 L3  23-03-10 11:19:12  ICAO   SFT0148  SUPER         0  ...     ASFT      ASTM           2.1         ON            66         2391.98
+        Returns:
+            Configuration      Date and Time  Type Equipment  Pilot Ice Level  ... Location Tyre Type Tyre Pressure Water Film Average Speed System Distance
+            RGL RWY 07 L3  23-03-10 11:19:12  ICAO   SFT0148  SUPER         0  ...     ASFT      ASTM           2.1         ON            66         2391.98
         """
         return self._friction_measure_report()
 
     @property
     def result_summary(self) -> pd.DataFrame:
         """
-          Runway Fric. A Fric. B Fric. C Fric.Max Fric.Min Fric avg T. surface T. air    Ice
-        0  RWY01    0.68    0.69    0.67     0.77     0.40     0.68         --     --  0.00%
+        Returns:
+            Runway Fric. A Fric. B Fric. C Fric.Max Fric.Min Fric avg T. surface T. air    Ice
+            RWY01    0.68    0.69    0.67     0.77     0.40     0.68         --     --  0.00%
         """
         return self._result_summary()
 
     @property
     def measurements(self) -> pd.DataFrame:
         """
-            Distance Friction Speed
-        0         10     0.71    59
-        1         20     0.65    62
-        2         30     0.65    64
-        3         40     0.65    66
-        4         50     0.69    67
-        ..       ...      ...   ...
+        Returns:
+            Distance Friction Speed  Av. Friction 100m
+            10     0.80    61               0.00
+            20     0.65    63               0.00
+            30     0.53    64               0.00
+            40     0.84    67               0.00
+            50     0.86    69               0.00
+            ...      ...   ...                ...
+            1760     0.88    66               0.81
         """
+        df = self._measurements()
+        df["Av. Friction 100m"] = self._rolling_average(df["Friction"])
         return self._measurements()
 
     @property
@@ -153,6 +163,12 @@ class ASFT_Data:
         return float(self.result_summary["Fric. C"][0])
 
     def _friction_measure_report(self) -> pd.DataFrame:
+        """
+        Retrieve and cache the measure report data as a pandas DataFrame.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing the measure report data.
+        """
         if self._fmr is None:
             fmr: pd.DataFrame = self.table[0].df
             columns: pd.Series = pd.concat([fmr[0], fmr[2]], ignore_index=True)
@@ -164,6 +180,12 @@ class ASFT_Data:
         return self._fmr
 
     def _result_summary(self) -> pd.DataFrame:
+        """
+        Retrieve and cache the result summary data as a pandas DataFrame.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing the result summary data.
+        """
         if self._rs is None:
             rs: pd.DataFrame = self.table[1].df
             columns: pd.Series = rs.iloc[0]
@@ -176,6 +198,12 @@ class ASFT_Data:
         return self._rs
 
     def _measurements(self) -> pd.DataFrame:
+        """
+        Retrieve and cache the measurements data as a pandas DataFrame.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing the measurements data with columns: Distance, Friction, and Speed.
+        """
         if self._m is None:
             m: pd.DataFrame = pd.concat([table.df for table in self.table[2:]], axis=0, ignore_index=True)
             row_index: int = m[(m[0] == "Distance") & (m[1] == "Friction")].index[0]
@@ -186,6 +214,16 @@ class ASFT_Data:
         return self._m
 
     def _get_configuration(self, configuration: str) -> RunwayConfig:
+        """
+        Extract runway configuration details (IATA code, runway numbering, side and separation) from a given string and return
+        a RunwayConfig object.
+
+        Args:
+            configuration (str): A string containing the runway configuration information.
+
+        Returns:
+            RunwayConfig: A RunwayConfig object with the extracted IATA airport code, runway numbering, side, and separation value.
+        """
         iata: str = re.findall(r"^[A-Z]{3}", configuration)[0]
         numbering: int = int(re.findall(r"(?<=RWY)\d{2}|(?<!RWY)\d{2}(?=\s)", configuration)[0])
         temp: str = re.findall(r"[A-Z][0-9]", configuration)[-1]
@@ -194,9 +232,25 @@ class ASFT_Data:
         return RunwayConfig(iata, numbering, side, separation)
 
     def _parse_date(self, date: str, format: str = DATE_FORMAT) -> datetime.datetime:
+        """
+        Parse a date string and return a datetime object.
+
+        Args:
+            date (str): The date string to be parsed.
+            format (str, optional): The format of the date string. Defaults to DATE_FORMAT.
+
+        Returns:
+            datetime.datetime: A datetime object representing the parsed date.
+        """
         return datetime.datetime.strptime(date, format)
 
     def _get_runway(self) -> str:
+        """
+        Get the runway numbering based on the configuration data.
+
+        Returns:
+            str: The runway numbering in the format "XX-YY".
+        """
         config = self._get_configuration(self.friction_measure_report["Configuration"][0])
         numbering = int(config.numbering)
         if numbering == 18:
@@ -205,3 +259,20 @@ class ASFT_Data:
         if exit_num == 0:
             exit_num = 36
         return f"{numbering:02d}-{exit_num:02d}"
+
+    def _rolling_average(
+        self, series: pd.Series, window_size: int = 10, center: bool = True, digits: int = 2
+    ) -> pd.Series:
+        """
+        Calculate the rolling average of a given pandas series and round the result to a specified number of decimal places.
+
+        Args:
+            series (pd.Series): The input pandas series for which the rolling average is to be calculated.
+            window_size (int, optional): The window size for calculating the rolling average. Defaults to 10.
+            center (bool, optional): Whether to center the window around the current row or use a trailing window. Defaults to True.
+            digits (int, optional): The number of decimal places to round the result to. Defaults to 2.
+
+        Returns:
+            pd.Series: A pandas series with the rounded rolling average values.
+        """
+        return series.rolling(window=window_size, center=center).mean().fillna(0).round(digits)

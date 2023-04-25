@@ -6,7 +6,7 @@ from openpyxl.worksheet.cell_range import CellRange
 from openpyxl.worksheet.table import Table
 
 from app.models.ASFT_Data import ASFT_Data
-from app.utils.calculations import rolling_average, chainage_table
+from app.utils.calculations import chainage_table
 
 
 def load_excel_workbook(file_path: str) -> Workbook:
@@ -134,12 +134,57 @@ def information_table(data: ASFT_Data) -> pd.DataFrame:
 
 
 def measurements_table(data: ASFT_Data, runway_length: int, starting_point: int) -> pd.DataFrame:
-    chainage = chainage_table(runway_length, reversed=False)
+    """
+    Aligns the measurements table with the corresponding chainage of the runway, measured from left to right.
+
+    This function takes runway numbering and runway length as inputs, calculates the chainage table, and then aligns
+    the measurements data with the corresponding chainage values based on the starting point. The chainage values are
+    measured from left to right, starting from the runway numbers that are between 01 and 18. The resulting DataFrame
+    contains the Key, chainage, and measurements columns.
+
+    Args:
+        data (ASFT_Data): An instance of the ASFT_Data class, which contains the runway numbering, key, and measurements.
+        runway_length (int): The total length of the runway, which should be a positive integer value.
+        starting_point (int): The chainage value where the measurements data should start aligning, referenced from the
+                              runway numbers between 01 and 18.
+
+    Returns:
+        pd.DataFrame: A pandas DataFrame containing the Key, chainage, and measurements columns, where the measurements
+        data is aligned with the corresponding chainage values based on the starting point.
+
+    Raises:
+        ValueError: If the measurements table overflows the chainage table. This error suggests adjusting the starting
+                    point or the runway length.
+
+
+        |=============|====================================================================|=============|
+        | -> -> -> -> |11   ===   ===   ===   ===   [ RUNWAY ]   ===   ===   ===   ===   29| <- <- <- <- |
+        |=============|====================================================================|=============|
+
+        .................................................................................................. chainage
+        [ 0 ]                                                                                   [ LENGTH ]
+
+
+                      .................................................................................... starting point from header 11
+                      [ START ]  -> -> -> -> -> -> -> -> -> -> -> -> -> ->-> -> -> -> -> -> -> -> -> -> ->
+
+
+                                                                                           ............... starting point from header 29
+        <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <-   [ START ]
+
+    """
+    numbering = int(data.numbering)
+    reverse = True if 19 <= numbering <= 36 else False if 1 <= numbering <= 18 else None
+
+    chainage = chainage_table(runway_length, reversed=reverse)
     measurements = data.measurements
 
     start_index = chainage[chainage["chainage"] == starting_point].index[0]
 
-    measurements["Av. Friction 100m"] = rolling_average(measurements["Friction"])
+    if start_index + len(measurements) > len(chainage):
+        raise ValueError(
+            "The measurements table overflows the chainage table. Please adjust the starting point or the runway length."
+        )
 
     for col in measurements.columns:
         if col not in chainage.columns:
@@ -152,10 +197,11 @@ def measurements_table(data: ASFT_Data, runway_length: int, starting_point: int)
     return chainage
 
 
-data = ASFT_Data("C:/Users/lucas/Desktop/AA2000/data/EZE/EZE RWY 17 L3_230317_140406.pdf")
-md = measurements_table(data, 3110, 110)
+data = ASFT_Data("C:/Users/lucas/Desktop/AA2000/data/EZE/EZE RWY 35 L3_230317_143552.pdf")
+md = measurements_table(data, 3110, 3000)
 
 print(md.head(40))
+print(md.tail(40))
 
 
 # TODO: measurement table for each side. adjust chianage depending on orientation
