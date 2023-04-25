@@ -2,8 +2,8 @@ import timeit
 from app.utils.functions import concurrent_ASFT
 from app.utils.report import write_report
 
-Left = ""
-Right = ""
+Left = "C:/Users/lucas/Desktop/AA2000/data/RGL/RGL RWY 07 L3_230310_111912.pdf"
+Right = "C:/Users/lucas/Desktop/AA2000/data/RGL/RGL RWY 07 R3_230310_112928.pdf"
 estado = "Buena"
 pavimento = "Asfalto"
 

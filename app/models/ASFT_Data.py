@@ -58,13 +58,13 @@ class ASFT_Data:
         """
         Returns:
             Distance Friction Speed  Av. Friction 100m
-            10     0.80    61               0.00
-            20     0.65    63               0.00
-            30     0.53    64               0.00
-            40     0.84    67               0.00
-            50     0.86    69               0.00
-            ...      ...   ...                ...
-            1760     0.88    66               0.81
+                10     0.80    61               0.00
+                20     0.65    63               0.00
+                30     0.53    64               0.00
+                40     0.84    67               0.00
+                50     0.86    69               0.00
+                ...    ...     ...              ...
+                1760   0.88    66               0.81
         """
         df = self._measurements()
         df["Av. Friction 100m"] = self._rolling_average(df["Friction"])
@@ -161,6 +161,67 @@ class ASFT_Data:
     @property
     def fric_C(self) -> float:
         return float(self.result_summary["Fric. C"][0])
+
+    def measurements_with_chainage(self, runway_length: int, starting_point: int) -> pd.DataFrame:
+        """
+        Aligns the measurements table with the corresponding chainage of the runway, measured from left to right.
+
+        This function takes runway numbering and runway length as inputs, calculates the chainage table, and then aligns
+        the measurements data with the corresponding chainage values based on the starting point. The chainage values are
+        measured from left to right, starting from the runway numbers that are between 01 and 18. The resulting DataFrame
+        contains the Key, chainage, and measurements columns.
+
+        Args:
+            data (ASFT_Data): An instance of the ASFT_Data class, which contains the runway numbering, key, and measurements.
+            runway_length (int): The total length of the runway, which should be a positive integer value.
+            starting_point (int): The chainage value where the measurements data should start aligning, referenced from the
+                                  runway numbers between 01 and 18.
+
+        Returns:
+            pd.DataFrame: A pandas DataFrame containing the Key, chainage, and measurements columns, where the measurements
+            data is aligned with the corresponding chainage values based on the starting point.
+
+        Raises:
+            ValueError: If the measurements table overflows the chainage table. This error suggests adjusting the starting
+                        point or the runway length.
+
+
+            |=============|====================================================================|=============|
+            | -> -> -> -> |11   ===   ===   ===   ===   [ RUNWAY ]   ===   ===   ===   ===   29| <- <- <- <- |
+            |=============|====================================================================|=============|
+
+            |................................................................................................. chainage
+            [ ORIGIN ]                                                                              [ LENGTH ]
+
+
+                          |................................................................................... starting point from header 11
+                          [ START ]  -> -> -> -> -> -> -> -> -> -> -> -> -> ->-> -> -> -> -> -> -> -> -> -> ->
+
+
+                                                                                               |.............. starting point from header 29
+            <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <-   [ START ]
+
+        """
+        numbering = int(self.numbering)
+        reverse = True if 19 <= numbering <= 36 else False if 1 <= numbering <= 18 else None
+
+        chainage = self._chainage_table(runway_length, reversed=reverse)
+
+        start_index = chainage[chainage["Chainage"] == starting_point].index[0]
+
+        if start_index + len(self.measurements) > len(chainage):
+            raise ValueError(
+                "The measurements table overflows the chainage table. Please adjust the starting point or the runway length."
+            )
+
+        for col in self.measurements.columns:
+            if col not in chainage.columns:
+                chainage[col] = 0
+
+            for i, value in enumerate(self.measurements[col]):
+                chainage.at[start_index + i, col] = value
+
+        return chainage
 
     def _friction_measure_report(self) -> pd.DataFrame:
         """
@@ -276,3 +337,27 @@ class ASFT_Data:
             pd.Series: A pandas series with the rounded rolling average values.
         """
         return series.rolling(window=window_size, center=center).mean().fillna(0).round(digits)
+
+    def _chainage_table(self, runway_length: int, step: int = 10, reversed: bool = False) -> pd.DataFrame:
+        """
+        Create a DataFrame containing chainage values at a specified step interval up to a given runway_length.
+
+        Args:
+            runway_length (int): The total length of the runway, which should be a positive integer value.
+            step (int, optional): The step interval for generating chainage values. Defaults to 10.
+            reversed (bool, optional): Whether to reverse the order of the resulting DataFrame rows. Defaults to False.
+
+        Returns:
+            pd.DataFrame: A pandas DataFrame containing a single column named "chainage" with chainage values at the
+            specified step intervals, starting from 0 and ending with the runway_length value.
+        """
+        chainage = list(range(0, runway_length + 1, step))
+        if chainage[-1] != runway_length:
+            chainage.append(runway_length)
+
+        df = pd.DataFrame(chainage, columns=["Chainage"])
+
+        if reversed:
+            df = df[::-1].reset_index(drop=True)
+
+        return df

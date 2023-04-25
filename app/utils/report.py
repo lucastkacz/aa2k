@@ -1,10 +1,8 @@
-import os
 import pandas as pd
 from typing import List, Tuple
 
 from app.models.ASFT_Data import ASFT_Data
-from app.utils.calculations import friction_thirds, friction_interval_mean
-from app.utils.functions import write_column
+from app.utils.excel_functions import write_column_to_excel, save_workbook
 
 from openpyxl import load_workbook, Workbook
 from openpyxl.worksheet.worksheet import Worksheet
@@ -94,6 +92,28 @@ def merge_average_row(length: int, col: str, ws: Worksheet, start_row: int, merg
         ws.merge_cells(f"{col}{row}:{col}{row + merge_range - 1}")
 
 
+def friction_thirds(data: ASFT_Data) -> pd.Series:
+    length: int = len(data)
+    third: float = length / 3
+    thirds = []
+    for row in range(length):
+        if row <= round(third - 1):
+            thirds.append(data.fric_A)
+        elif row <= round(2 * third - 1):
+            thirds.append(data.fric_B)
+        else:
+            thirds.append(data.fric_C)
+    return thirds
+
+
+def friction_interval_mean(df: pd.DataFrame, values: str, interval: int = 10) -> pd.Series:
+    def get_friction_mean(series: pd.Series) -> pd.Series:
+        fm: pd.Series = series.rolling(window=interval).mean()
+        return fm[9::10]
+
+    return get_friction_mean(df[values]).reindex(range(len(df))).bfill()
+
+
 def calculate_measurements(L: ASFT_Data, R: ASFT_Data) -> None:
     """
     Calculates the measurements for both L and R ASFT_Data objects.
@@ -102,13 +122,13 @@ def calculate_measurements(L: ASFT_Data, R: ASFT_Data) -> None:
         L (ASFT_Data): ASFT_Data object with side 'L'.
         R (ASFT_Data): ASFT_Data object with side 'R'.
     """
-    L.measurements["Av. Friction 100m"] = friction_interval_mean(L.measurements, "Friction")
+    L.measurements["Avv. Friction 100m"] = friction_interval_mean(L.measurements, "Friction")
     L.measurements["Thirds"] = friction_thirds(L)
-    R.measurements["Av. Friction 100m"] = friction_interval_mean(R.measurements, "Friction")
+    R.measurements["Avv. Friction 100m"] = friction_interval_mean(R.measurements, "Friction")
     R.measurements["Thirds"] = friction_thirds(R)
 
 
-def setup_workbook(template_path: str, L: ASFT_Data) -> Tuple[Workbook, Worksheet]:
+def setup_workbook(template_path: str, title: str) -> Tuple[Workbook, Worksheet]:
     """
     Sets up the workbook using the provided template.
 
@@ -121,7 +141,7 @@ def setup_workbook(template_path: str, L: ASFT_Data) -> Tuple[Workbook, Workshee
     """
     wb = load_workbook(template_path)
     ws = wb.active
-    ws.title = f"{L.iata}-{L.numbering}-{L.separation}m-{L.date.date()}"
+    ws.title = title
     ws.page_setup.paperSize = ws.PAPERSIZE_A4
     ws.page_setup.scale = 95
 
@@ -155,21 +175,21 @@ def populate_header_data(L: ASFT_Data, R: ASFT_Data, estado: str, pavimento: str
 
 def write_data_to_worksheet(L: ASFT_Data, R: ASFT_Data, ws: Worksheet) -> None:
     """
-    Writes data from ASFT_Data objects to the worksheet.
+    Writes data from ASFT_Data objects to the worksheet and merges columns.
 
     Args:
         L (ASFT_Data): ASFT_Data object with side 'L'.
         R (ASFT_Data): ASFT_Data object with side 'R'.
         ws (Worksheet): The target worksheet.
     """
-    write_column(L.measurements["Distance"], START_ROW, "B", ws, number_format="General")
-    write_column(L.measurements["Friction"], START_ROW, "C", ws, number_format="0.00")
-    write_column(L.measurements["Av. Friction 100m"], START_ROW, "D", ws, number_format="0.00")
-    write_column(L.measurements["Thirds"], START_ROW, "E", ws, number_format="0.00")
-    write_column(R.measurements["Distance"], START_ROW, "F", ws, number_format="General")
-    write_column(R.measurements["Friction"], START_ROW, "G", ws, number_format="0.00")
-    write_column(R.measurements["Av. Friction 100m"], START_ROW, "H", ws, number_format="0.00")
-    write_column(R.measurements["Thirds"], START_ROW, "I", ws, number_format="0.00")
+    write_column_to_excel(ws, START_ROW, "B", L.measurements["Distance"], format="General")
+    write_column_to_excel(ws, START_ROW, "C", L.measurements["Friction"], format="0.00")
+    write_column_to_excel(ws, START_ROW, "D", L.measurements["Avv. Friction 100m"], format="0.00")
+    write_column_to_excel(ws, START_ROW, "E", L.measurements["Thirds"], format="0.00")
+    write_column_to_excel(ws, START_ROW, "F", R.measurements["Distance"], format="General")
+    write_column_to_excel(ws, START_ROW, "G", R.measurements["Friction"], format="0.00")
+    write_column_to_excel(ws, START_ROW, "H", R.measurements["Avv. Friction 100m"], format="0.00")
+    write_column_to_excel(ws, START_ROW, "I", R.measurements["Thirds"], format="0.00")
 
     merge_average_row(len(L.measurements), "D", ws, START_ROW, MERGE_RANGE)
     merge_average_row(len(R.measurements), "H", ws, START_ROW, MERGE_RANGE)
@@ -179,12 +199,6 @@ def write_data_to_worksheet(L: ASFT_Data, R: ASFT_Data, ws: Worksheet) -> None:
 
 
 def format_cells(ws: Worksheet) -> None:
-    """
-    Applies formatting to cells in the worksheet.
-
-    Args:
-        ws (Worksheet): The target worksheet.
-    """
     border = Border(
         left=Side(border_style="medium", color="000000"),
         right=Side(border_style="medium", color="000000"),
@@ -199,21 +213,8 @@ def format_cells(ws: Worksheet) -> None:
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
 
-def save_workbook(wb: Workbook, L: ASFT_Data, output_folder: str) -> None:
-    """
-    Saves the workbook to the specified output folder.
-
-    Args:
-        wb (Workbook): Workbook to save.
-        L (ASFT_Data): ASFT_Data object with side 'L'.
-        output_folder (str): Path to the output folder.
-    """
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-
-    file_name = f"Datos {L.iata} RWY{L.numbering} {L.separation}m {L.date.date()}.xlsx"
-    output_path = os.path.join(output_folder, file_name)
-    wb.save(output_path)
+def file_name(L: ASFT_Data) -> str:
+    return f"{L.iata} RWY{L.numbering} {L.separation}m {L.date.date()}"
 
 
 def write_report(
@@ -226,8 +227,9 @@ def write_report(
     validate_attributes(L, R, ["iata", "runway", "numbering", "separation", "equipment", "tyre_type"])
     validate_lengths(L, R)
     calculate_measurements(L, R)
-    wb, ws = setup_workbook("app/templates/report_template.xlsx", L)
+    name = file_name(L)
+    wb, ws = setup_workbook("app/templates/report_template.xlsx", name)
     populate_header_data(L, R, estado, pavimento, ws)
     write_data_to_worksheet(L, R, ws)
     format_cells(ws)
-    save_workbook(wb, L, output_folder)
+    save_workbook(wb, f"Datos {name}.xlsx", output_folder)
