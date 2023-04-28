@@ -165,3 +165,38 @@ def save_workbook(wb: Workbook, filename: str, output_folder: str) -> None:
 
     output_path = os.path.join(output_folder, filename)
     wb.save(output_path)
+
+
+def merge_columns_into_thirds(number_of_rows: int, col: str, ws: Worksheet, start_row) -> pd.Series:
+    """
+    Merges cells in the given column into thirds.
+
+    Args:
+        number_of_rows (int): Length of the data or the amount of rows.
+        col (str): Column identifier.
+        ws (Worksheet): The target worksheet.
+        start_row (int): The starting row for merging cells.
+    """
+    third: float = number_of_rows / 3
+    row_A: int = start_row
+    row_B: int = round(third) + start_row
+    row_C: int = round(2 * third) + start_row
+    end_row: int = number_of_rows + start_row
+    ws.merge_cells(f"{col}{row_A}:{col}{row_B - 1}")
+    ws.merge_cells(f"{col}{row_B}:{col}{row_C - 1}")
+    ws.merge_cells(f"{col}{row_C}:{col}{end_row - 1}")
+
+
+def merge_rows_in_range(length: int, col: str, ws: Worksheet, start_row: int, merge_range: int) -> None:
+    """
+    Merges cells vertically in the specified column to create average rows.
+
+    Args:
+        length (int): The total number of rows to merge.
+        col (str): The column in which the cells should be merged.
+        ws (Worksheet): The target worksheet.
+        start_row (int): The starting row number for the merging process.
+        merge_range (int): The number of consecutive rows to merge in each step.
+    """
+    for row in range(start_row, length + start_row, merge_range):
+        ws.merge_cells(f"{col}{row}:{col}{row + merge_range - 1}")

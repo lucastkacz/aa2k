@@ -33,7 +33,11 @@ class ASFT_Data:
         return f"{self.filename}"
 
     def __len__(self) -> int:
-        return len(self._m)
+        """
+        Returns:
+            Number of rows in the measurements table.
+        """
+        return len(self.measurements)
 
     @property
     def friction_measure_report(self) -> pd.DataFrame:
@@ -271,6 +275,11 @@ class ASFT_Data:
             columns: pd.Series = m.iloc[row_index, :3]
             values: pd.DataFrame = m.iloc[row_index + 1 : -3, :3]
             df = pd.DataFrame(values.values, columns=columns.values)
+
+            df["Distance"] = df["Distance"].astype(int)
+            df["Speed"] = df["Speed"].astype(int)
+            df["Friction"] = df["Friction"].astype(float)
+
             self._m = df
         return self._m
 

@@ -1,11 +1,11 @@
 import timeit
-from app.utils.functions import concurrent_ASFT
+from app.utils.functions.util_functions import concurrent_ASFT
 from app.utils.report import write_report
 
-Left = "C:/Users/lucas/Desktop/AA2000/data/RGL/RGL RWY 07 L3_230310_111912.pdf"
-Right = "C:/Users/lucas/Desktop/AA2000/data/RGL/RGL RWY 07 R3_230310_112928.pdf"
+Left = "C:/Users/lucas/Desktop/AA2000/data/AEP/AEP RWY 31  L3_220520_122446.pdf"
+Right = "C:/Users/lucas/Desktop/AA2000/data/AEP/AEP RWY 31  R3_220520_124009.pdf"
 estado = "Buena"
-pavimento = "Asfalto"
+pavimento = "Hormigón "
 
 
 def run_write_report():
