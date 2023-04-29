@@ -1,9 +1,6 @@
 from app.models.ASFT_Data import ASFT_Data
 import pandas as pd
-
-pdf_data = "C:/Users/lucas/Desktop/AA2000/data/AEP/AEP RWY 31  L3_220520_122446.pdf"
-pdf_data = "C:/Users/lucas/Desktop/AA2000/data/EQS/EQS RWY 05 L3_230325_181453.pdf"
-data = ASFT_Data(pdf_data)
+from typing import Optional
 
 
 def measurements_table(data: ASFT_Data, runway_legth, starting_point) -> pd.DataFrame:
@@ -46,63 +43,36 @@ def information_table(data: ASFT_Data) -> pd.DataFrame:
     )
 
 
-# measurements = measurements_table(data, 2600, 2400)
-measurements = measurements_table(data, 3500, 200)
-information = information_table(data)
+def process_dataframes(
+    measurements: pd.DataFrame,
+    information: pd.DataFrame,
+    file_location: Optional[str] = None,
+    output_location: Optional[str] = None,
+) -> None:
+    if output_location is None:
+        output_location = "db.xlsx"
 
-
-def create_excel_workbook(measurements, information, file_location=None, output_location=None):
-    # Convert the input data to pandas DataFrames
-    measurements_df = pd.DataFrame(measurements)
-    information_df = pd.DataFrame(information)
-
-    if file_location:
+    if file_location is None:
+        with pd.ExcelWriter(output_location, engine="openpyxl") as writer:
+            measurements.to_excel(writer, sheet_name="Measurements", index=False)
+            information.to_excel(writer, sheet_name="Information", index=False)
+    else:
         try:
-            # Read the existing Excel workbook
-            existing_information_df = pd.read_excel(file_location, sheet_name="Information", engine="openpyxl")
+            with pd.ExcelFile(file_location) as xls:
+                existing_measurements = pd.read_excel(xls, sheet_name="Measurements")
+                existing_information = pd.read_excel(xls, sheet_name="Information")
 
-            # Check if the key in the new information_df is already present in the existing_information_df
-            for key in information_df["key"]:
-                if key in existing_information_df["key"].values:
-                    raise ValueError(f"The data with key {key} is already present in the file.")
+            key_value = information.loc[0, "key"]
+
+            if (existing_information["key"] == key_value).any():
+                raise ValueError("The data was already present in the Excel workbook.")
+            else:
+                updated_measurements = pd.concat([existing_measurements, measurements], ignore_index=True)
+                updated_information = pd.concat([existing_information, information], ignore_index=True)
+
+                with pd.ExcelWriter(output_location, engine="openpyxl") as writer:
+                    updated_measurements.to_excel(writer, sheet_name="Measurements", index=False)
+                    updated_information.to_excel(writer, sheet_name="Information", index=False)
 
         except FileNotFoundError:
-            raise FileNotFoundError(f"The file {file_location} was not found.")
-
-        except ValueError:
-            raise ValueError(
-                f"The Excel file {file_location} does not contain an 'Information' sheet or the key column is missing."
-            )
-
-        # Create a new Excel writer with the existing file
-        excel_writer = pd.ExcelWriter(file_location, engine="openpyxl", mode="a")
-
-    else:
-        if not output_location:
-            output_location = "output.xlsx"
-        excel_writer = pd.ExcelWriter(output_location, engine="openpyxl")
-
-    # Check if sheets exist and read them
-    try:
-        existing_measurements_df = pd.read_excel(file_location, sheet_name="Measurements", engine="openpyxl")
-    except ValueError:
-        existing_measurements_df = pd.DataFrame(columns=measurements_df.columns)
-
-    try:
-        existing_information_df = pd.read_excel(file_location, sheet_name="Information", engine="openpyxl")
-    except ValueError:
-        existing_information_df = pd.DataFrame(columns=information_df.columns)
-
-    # Append new data to existing data
-    new_measurements_df = existing_measurements_df.append(measurements_df, ignore_index=True)
-    new_information_df = existing_information_df.append(information_df, ignore_index=True)
-
-    # Write the DataFrames to their respective sheets
-    new_measurements_df.to_excel(excel_writer, sheet_name="Measurements", index=False)
-    new_information_df.to_excel(excel_writer, sheet_name="Information", index=False)
-
-    # Save the Excel workbook
-    excel_writer.close()
-
-
-create_excel_workbook(measurements, information, "C:/Users/lucas/Desktop/AA2000/output.xlsx")
+            raise ValueError("The provided file location is not valid or the file doesn't exist.")
