@@ -1,6 +1,10 @@
 from app.models.ASFT_Data import ASFT_Data
 import pandas as pd
-from typing import Optional
+
+from app.utils.functions.excel_functions import append_dataframe_to_excel
+
+from typing import Union
+from pathlib import Path
 
 
 def measurements_table(data: ASFT_Data, runway_legth, starting_point) -> pd.DataFrame:
@@ -43,36 +47,13 @@ def information_table(data: ASFT_Data) -> pd.DataFrame:
     )
 
 
-def process_dataframes(
-    measurements: pd.DataFrame,
-    information: pd.DataFrame,
-    file_location: Optional[str] = None,
-    output_location: Optional[str] = None,
-) -> None:
-    if output_location is None:
-        output_location = "db.xlsx"
+def add_data_to_db(measurements: pd.DataFrame, information: pd.DataFrame, excel_file: Union[str, Path]):
+    pass
 
-    if file_location is None:
-        with pd.ExcelWriter(output_location, engine="openpyxl") as writer:
-            measurements.to_excel(writer, sheet_name="Measurements", index=False)
-            information.to_excel(writer, sheet_name="Information", index=False)
-    else:
-        try:
-            with pd.ExcelFile(file_location) as xls:
-                existing_measurements = pd.read_excel(xls, sheet_name="Measurements")
-                existing_information = pd.read_excel(xls, sheet_name="Information")
 
-            key_value = information.loc[0, "key"]
-
-            if (existing_information["key"] == key_value).any():
-                raise ValueError("The data was already present in the Excel workbook.")
-            else:
-                updated_measurements = pd.concat([existing_measurements, measurements], ignore_index=True)
-                updated_information = pd.concat([existing_information, information], ignore_index=True)
-
-                with pd.ExcelWriter(output_location, engine="openpyxl") as writer:
-                    updated_measurements.to_excel(writer, sheet_name="Measurements", index=False)
-                    updated_information.to_excel(writer, sheet_name="Information", index=False)
-
-        except FileNotFoundError:
-            raise ValueError("The provided file location is not valid or the file doesn't exist.")
+pdf = "C:/Users/lucas/Desktop/AA2000/sample/EQS/EQS RWY 23 R3_230325_182708.pdf"
+data = ASFT_Data(pdf)
+measurements = measurements_table(data, 3000, 2500)
+information = information_table(data)
+append_dataframe_to_excel(measurements, None, "Measurements")
+append_dataframe_to_excel(measurements, None, "Measurements")

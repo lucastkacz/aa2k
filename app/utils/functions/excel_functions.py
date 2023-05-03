@@ -6,6 +6,7 @@ from openpyxl.worksheet.cell_range import CellRange
 from openpyxl.worksheet.table import Table
 from openpyxl.utils import column_index_from_string
 from typing import Optional, Union
+from pathlib import Path
 
 
 def load_excel_workbook(file_path: str) -> Workbook:
@@ -200,3 +201,25 @@ def merge_rows_in_range(length: int, col: str, ws: Worksheet, start_row: int, me
     """
     for row in range(start_row, length + start_row, merge_range):
         ws.merge_cells(f"{col}{row}:{col}{row + merge_range - 1}")
+
+
+def append_dataframe_to_excel(dataframe: pd.DataFrame, excel_file: Union[str, Path], sheet_name: str) -> None:
+    file_path = Path(excel_file)
+
+    if not file_path.exists():
+        wb = Workbook()
+        ws = wb.active
+        ws.title = sheet_name
+        ws.append(list(dataframe.columns))
+    else:
+        wb = load_workbook(file_path)
+        if sheet_name in wb:
+            ws = wb[sheet_name]
+        else:
+            ws = wb.create_sheet(sheet_name)
+
+    for index, row in dataframe.iterrows():
+        row_list = list(row)
+        ws.append(row_list)
+
+    wb.save(excel_file)
