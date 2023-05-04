@@ -25,6 +25,12 @@ class ASFT_Data:
         self._rs: Optional[pd.DataFrame] = None
         self._m: Optional[pd.DataFrame] = None
 
+        # PROPERTIES MANUALLY SET
+        self._operator = ""
+        self._temperature = ""
+        self._surface_condition = ""
+        self._weather = ""
+
     def __str__(self) -> str:
         """
         Returns:
@@ -165,6 +171,40 @@ class ASFT_Data:
     @property
     def fric_C(self) -> float:
         return float(self.result_summary["Fric. C"][0])
+
+    # PROPERTIES MANUALLY SET
+
+    @property
+    def operator(self) -> str:
+        return self._operator
+
+    @property
+    def temperature(self) -> str:
+        return self._temperature
+
+    @property
+    def surface_condition(self) -> str:
+        return self._surface_condition
+
+    @property
+    def weather(self) -> str:
+        return self._weather
+
+    @operator.setter
+    def operator(self, value: str):
+        self._operator = value
+
+    @temperature.setter
+    def temperature(self, value: str):
+        self._temperature = value
+
+    @surface_condition.setter
+    def surface_condition(self, value: str):
+        self._surface_condition = value
+
+    @weather.setter
+    def weather(self, value: str):
+        self._weather = value
 
     def measurements_with_chainage(self, runway_length: int, starting_point: int) -> pd.DataFrame:
         """

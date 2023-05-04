@@ -1,2 +1,4 @@
 logging
 validate all data, greater than zero, steps dividivbel etc etc
+hacer funcionar la tabla con longitudes de pista no multiplos de 10 (redondear, etc)
+utilizar PATHLIB

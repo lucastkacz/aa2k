@@ -47,7 +47,10 @@ def information_table(data: ASFT_Data) -> pd.DataFrame:
     )
 
 
-def add_data_to_db(measurements: pd.DataFrame, information: pd.DataFrame, excel_file: Union[str, Path]):
+def add_data_to_db(data: ASFT_Data, runway_length: int, starting_point: int, excel_file: Union[str, Path]):
+    measurements = measurements_table(data, runway_length, starting_point)
+    information = information_table(data)
+
     file_path = Path(excel_file)
     if file_path.exists():
         existing_information_table = pd.read_excel(excel_file, sheet_name="Information")
@@ -55,14 +58,5 @@ def add_data_to_db(measurements: pd.DataFrame, information: pd.DataFrame, excel_
         if any(information["key"].isin(existing_information_table["key"])):
             raise Exception("The key already exists in the database.")
 
-    append_dataframe_to_excel(measurements, "db.xlsx", "Measurements")
-    append_dataframe_to_excel(information, "db.xlsx", "Information")
-
-
-pdf = "C:/Users/lucas/Desktop/AA2000/sample/RGL/RGL RWY 07 L3_230310_111912.pdf"
-data = ASFT_Data(pdf)
-measurements = measurements_table(data, 3500, 100)
-information = information_table(data)
-# append_dataframe_to_excel(measurements, "db.xlsx", "Measurements")
-# append_dataframe_to_excel(information, "db.xlsx", "Information")
-add_data_to_db(measurements, information, "db.xlsx")
+    append_dataframe_to_excel(measurements, excel_file, "Measurements")
+    append_dataframe_to_excel(information, excel_file, "Information")

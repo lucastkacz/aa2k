@@ -204,6 +204,17 @@ def merge_rows_in_range(length: int, col: str, ws: Worksheet, start_row: int, me
 
 
 def append_dataframe_to_excel(dataframe: pd.DataFrame, excel_file: Union[str, Path], sheet_name: str) -> None:
+    """
+    Appends a pandas DataFrame to an existing or new Excel file in a specified sheet.
+
+    Args:
+        dataframe (pd.DataFrame): The DataFrame to be appended to the Excel file.
+        excel_file (Union[str, Path]): The path to the Excel file where the DataFrame will be appended.
+        sheet_name (str): The name of the sheet where the DataFrame should be appended.
+
+    Returns:
+        None
+    """
     file_path = Path(excel_file)
 
     if not file_path.exists():
