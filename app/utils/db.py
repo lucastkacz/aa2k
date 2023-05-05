@@ -43,6 +43,11 @@ def information_table(data: ASFT_Data) -> pd.DataFrame:
             "tyre pressure": [data.tyre_pressure],
             "water film": [data.water_film],
             "system distance": [data.system_distance],
+            "operator": [data.operator],
+            "temperature": [data.temperature],
+            "surface condition": [data.surface_condition],
+            "weather": [data.weather],
+            "runway material": [data.runway_material],
         }
     )
 

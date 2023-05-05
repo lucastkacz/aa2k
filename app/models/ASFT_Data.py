@@ -1,9 +1,10 @@
-from typing import Optional, NamedTuple
 import pandas as pd
-import camelot
 import datetime
+import pathlib
+import camelot
 import re
-import os
+
+from typing import Optional, NamedTuple
 
 
 class RunwayConfig(NamedTuple):
@@ -16,9 +17,9 @@ class RunwayConfig(NamedTuple):
 class ASFT_Data:
     DATE_FORMAT = "%y-%m-%d %H:%M:%S"
 
-    def __init__(self, file_path: str) -> None:
-        self.filename: str = os.path.splitext(os.path.basename(file_path))[0]
-        self.table = camelot.read_pdf(file_path, pages="all")
+    def __init__(self, file_path: pathlib.Path) -> None:
+        self.filename: str = file_path.stem
+        self.table = camelot.read_pdf(str(file_path), pages="all")
 
         # CACHE
         self._fmr: Optional[pd.DataFrame] = None
@@ -30,6 +31,7 @@ class ASFT_Data:
         self._temperature = ""
         self._surface_condition = ""
         self._weather = ""
+        self._runway_material = ""
 
     def __str__(self) -> str:
         """
@@ -190,6 +192,10 @@ class ASFT_Data:
     def weather(self) -> str:
         return self._weather
 
+    @property
+    def runway_material(self) -> str:
+        return self._runway_material
+
     @operator.setter
     def operator(self, value: str):
         self._operator = value
@@ -205,6 +211,10 @@ class ASFT_Data:
     @weather.setter
     def weather(self, value: str):
         self._weather = value
+
+    @runway_material.setter
+    def runway_material(self, value: str):
+        self._runway_material = value
 
     def measurements_with_chainage(self, runway_length: int, starting_point: int) -> pd.DataFrame:
         """
@@ -230,20 +240,20 @@ class ASFT_Data:
                         point or the runway length.
 
 
-            |=============|====================================================================|=============|
-            | -> -> -> -> |11   ===   ===   ===   ===   [ RUNWAY ]   ===   ===   ===   ===   29| <- <- <- <- |
-            |=============|====================================================================|=============|
+            |=============|===================================================================|=============|
+            | -> -> -> -> |11   ===   ===   ===   ===   [  RWY  ]   ===   ===   ===   ===   29| <- <- <- <- |
+            |=============|===================================================================|=============|
 
-            |................................................................................................. chainage
-            [ ORIGIN ]                                                                              [ LENGTH ]
-
-
-                          |................................................................................... starting point from header 11
-                          [ START ]  -> -> -> -> -> -> -> -> -> -> -> -> -> ->-> -> -> -> -> -> -> -> -> -> ->
+            |...............................................................................................| chainage
+            [ ORIGIN ]                                                                             [ LENGTH ]
 
 
-                                                                                               |.............. starting point from header 29
-            <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <-   [ START ]
+                          |.................................................................................| starting point from header 11
+                          [ START ] -> -> -> -> -> -> -> -> -> -> -> -> -> ->-> -> -> -> -> -> -> -> -> -> ->
+
+
+                                                                                              |.............| starting point from header 29
+            <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <-  [ START ]
 
         """
         numbering = int(self.numbering)
