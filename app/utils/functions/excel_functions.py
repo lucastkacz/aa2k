@@ -152,22 +152,6 @@ def write_column_to_excel(
             cell.value = value
 
 
-def save_workbook(wb: Workbook, filename: str, output_folder: str) -> None:
-    """
-    Saves the workbook to the specified output folder.
-
-    Args:
-        wb (Workbook): Workbook to save.
-        L (ASFT_Data): ASFT_Data object with side 'L'.
-        output_folder (str): Path to the output folder.
-    """
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-
-    output_path = os.path.join(output_folder, filename)
-    wb.save(output_path)
-
-
 def merge_columns_into_thirds(number_of_rows: int, col: str, ws: Worksheet, start_row) -> pd.Series:
     """
     Merges cells in the given column into thirds.

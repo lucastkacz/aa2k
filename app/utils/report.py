@@ -1,7 +1,6 @@
 from app.models.ASFT_Data import ASFT_Data
 from app.utils.functions.excel_functions import (
     write_column_to_excel,
-    save_workbook,
     merge_columns_into_thirds,
     merge_rows_in_range,
 )
@@ -14,6 +13,8 @@ from app.utils.functions.report_functions import (
     center_and_bold_cells,
     get_file_name,
 )
+
+from pathlib import Path
 
 
 from openpyxl.worksheet.worksheet import Worksheet
@@ -31,7 +32,7 @@ def calculate_measurements(L: ASFT_Data, R: ASFT_Data) -> None:
     R.measurements["Thirds"] = friction_thirds(R)
 
 
-def populate_header_data(L: ASFT_Data, R: ASFT_Data, estado: str, pavimento: str, ws: Worksheet) -> None:
+def populate_header_data(L: ASFT_Data, R: ASFT_Data, ws: Worksheet) -> None:
     """
     Populates the header information in the worksheet.
 
@@ -50,8 +51,8 @@ def populate_header_data(L: ASFT_Data, R: ASFT_Data, estado: str, pavimento: str
     ws["I5"] = L.equipment[-3:]
     ws["E6"] = int(L.average_speed)
     ws["H6"] = L.tyre_type
-    ws["E7"] = estado
-    ws["H7"] = pavimento
+    ws["E7"] = L.weather
+    ws["H7"] = L.runway_material
     ws["E8"] = L.date.time()
     ws["H8"] = R.date.time()
 
@@ -81,19 +82,19 @@ def write_data_to_worksheet(L: ASFT_Data, R: ASFT_Data, ws: Worksheet) -> None:
     merge_columns_into_thirds(len(R), "I", ws, START_ROW)
 
 
-def write_report(
-    L: ASFT_Data,
-    R: ASFT_Data,
-    estado: str,
-    pavimento: str,
-    output_folder: str = "output",
-) -> None:
+def write_report(L: ASFT_Data, R: ASFT_Data, output_folder: str) -> None:
     validate_attributes(L, R, ["iata", "runway", "numbering", "separation", "equipment", "tyre_type"])
     validate_lengths(L, R)
     calculate_measurements(L, R)
     name = get_file_name(L)
     wb, ws = setup_workbook("app/templates/report_template.xlsx", name)
-    populate_header_data(L, R, estado, pavimento, ws)
+    populate_header_data(L, R, ws)
     write_data_to_worksheet(L, R, ws)
     center_and_bold_cells(ws, START_ROW, START_COL)
-    save_workbook(wb, f"Datos {name}.xlsx", output_folder)
+
+    # Construct the output path using pathlib.Path
+    output_folder_path = Path(output_folder)
+    output_file_path = output_folder_path / f"Datos {name}.xlsx"
+
+    # Save the file to the specified output folder
+    wb.save(str(output_file_path))
