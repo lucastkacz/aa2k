@@ -230,7 +230,7 @@ class ASFT_Data:
     def runway_material(self, value: str):
         self._runway_material = value
 
-    def measurements_with_chainage(self, runway_length: int, starting_point: int) -> pd.DataFrame:
+    def measurements_with_chainage(self) -> pd.DataFrame:
         """
         Aligns the measurements table with the corresponding chainage of the runway, measured from left to right.
 
@@ -270,12 +270,16 @@ class ASFT_Data:
             <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <-  [ START ]
 
         """
+
+        if not self._runway_length or not self._starting_point:
+            raise ValueError("Please set the runway length and starting point before calling this function.")
+
         numbering = int(self.numbering)
         reverse = True if 19 <= numbering <= 36 else False if 1 <= numbering <= 18 else None
 
-        chainage = self._chainage_table(runway_length, reversed=reverse)
+        chainage = self._chainage_table(self._runway_length, reversed=reverse)
 
-        start_index = chainage[chainage["Chainage"] == starting_point].index[0]
+        start_index = chainage[chainage["Chainage"] == self._starting_point].index[0]
 
         if start_index + len(self.measurements) > len(chainage):
             raise ValueError(

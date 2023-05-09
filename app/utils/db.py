@@ -7,8 +7,8 @@ from typing import Union
 from pathlib import Path
 
 
-def measurements_table(data: ASFT_Data, runway_legth, starting_point) -> pd.DataFrame:
-    measurements = data.measurements_with_chainage(runway_legth, starting_point)
+def measurements_table(data: ASFT_Data) -> pd.DataFrame:
+    measurements = data.measurements_with_chainage()
     measurements_df = pd.DataFrame(
         {
             "key": data.key,
@@ -29,14 +29,16 @@ def information_table(data: ASFT_Data) -> pd.DataFrame:
             "key": [data.key],
             "date": [data.date],
             "iata": [data.iata],
+            "numbering": [data.numbering],
             "side": [data.side],
             "separation": [data.separation],
             "runway": [data.runway],
-            "numbering": [data.numbering],
             "average speed": [data.average_speed],
             "fric_A": [data.fric_A],
             "fric_B": [data.fric_B],
             "fric_C": [data.fric_C],
+            "runway length": [data.runway_length],
+            "starting point": [data.starting_point],
             "equipment": [data.equipment],
             "pilot": [data.pilot],
             "ice level": [data.ice_level],
@@ -52,8 +54,8 @@ def information_table(data: ASFT_Data) -> pd.DataFrame:
     )
 
 
-def add_data_to_db(data: ASFT_Data, runway_length: int, starting_point: int, excel_file: Union[str, Path]):
-    measurements = measurements_table(data, runway_length, starting_point)
+def add_data_to_db(data: ASFT_Data, excel_file: Union[str, Path]):
+    measurements = measurements_table(data)
     information = information_table(data)
 
     file_path = Path(excel_file)
