@@ -1,5 +1,5 @@
 from app.utils.functions.util_functions import concurrent_ASFT
-from app.utils.report import write_report
+from app.utils.report import write_report_no_chainage
 from pathlib import Path as pathlib_Path
 from inquirer import prompt, List, Path
 import click
@@ -10,7 +10,7 @@ def run_write_report(left_file, right_file, weather, runway_material, output_fol
     L, R = concurrent_ASFT(left_file, right_file)
     L.weather = weather
     L.runway_material = runway_material
-    write_report(L, R, output_folder)
+    write_report_no_chainage(L, R, output_folder)
 
 
 @click.command()
@@ -37,6 +37,7 @@ def main():
 
     with yaspin(text="Cargando...", spinner="line") as spinner:
         run_write_report(left_file, right_file, weather, runway_material, output_folder)
+        spinner.text = "¡Listo!"
         spinner.ok("✓")
 
 

@@ -27,11 +27,13 @@ class ASFT_Data:
         self._m: Optional[pd.DataFrame] = None
 
         # PROPERTIES MANUALLY SET
-        self._operator = ""
-        self._temperature = ""
-        self._surface_condition = ""
-        self._weather = ""
-        self._runway_material = ""
+        self._operator: str = ""
+        self._temperature: str = ""
+        self._surface_condition: str = ""
+        self._weather: str = ""
+        self._runway_material: str = ""
+        self._runway_length: int = 0
+        self._starting_point: int = 0
 
     def __str__(self) -> str:
         """
@@ -111,10 +113,6 @@ class ASFT_Data:
         return int(self.friction_measure_report["Ice Level"][0])
 
     @property
-    def runway_length(self) -> str:
-        return int(self.friction_measure_report["Runway Length"][0])
-
-    @property
     def location(self) -> str:
         return self.friction_measure_report["Location"][0]
 
@@ -177,6 +175,14 @@ class ASFT_Data:
     # PROPERTIES MANUALLY SET
 
     @property
+    def runway_length(self) -> int:
+        return self._runway_length
+
+    @property
+    def starting_point(self) -> int:
+        return self._starting_point
+
+    @property
     def operator(self) -> str:
         return self._operator
 
@@ -195,6 +201,14 @@ class ASFT_Data:
     @property
     def runway_material(self) -> str:
         return self._runway_material
+
+    @runway_length.setter
+    def runway_length(self, value: int):
+        self._runway_length = value
+
+    @starting_point.setter
+    def starting_point(self, value: int):
+        self._starting_point = value
 
     @operator.setter
     def operator(self, value: str):
@@ -228,8 +242,8 @@ class ASFT_Data:
         Args:
             data (ASFT_Data): An instance of the ASFT_Data class, which contains the runway numbering, key, and measurements.
             runway_length (int): The total length of the runway, which should be a positive integer value.
-            starting_point (int): The chainage value where the measurements data should start aligning, referenced from the
-                                  runway numbers between 01 and 18.
+            starting_point (int): The chainage value where the measurements data should start aligning, referenced
+                                from the runway numbers between 01 and 18.
 
         Returns:
             pd.DataFrame: A pandas DataFrame containing the Key, chainage, and measurements columns, where the measurements
@@ -378,6 +392,8 @@ class ASFT_Data:
         exit_num = (numbering + 18) % 36
         if exit_num == 0:
             exit_num = 36
+        if numbering > exit_num:
+            return f"{exit_num:02d}-{numbering:02d}"
         return f"{numbering:02d}-{exit_num:02d}"
 
     def _rolling_average(
