@@ -19,10 +19,6 @@ from pathlib import Path
 
 from openpyxl.worksheet.worksheet import Worksheet
 
-from typing import NewType
-
-IntMultipleOf10 = NewType("PositiveIntMultipleOf10", int)
-
 
 START_ROW = 11
 START_COL = 2
@@ -98,8 +94,13 @@ def write_report_with_chainage(
     validate_attributes(L, R, ["iata", "runway", "numbering", "separation", "equipment", "tyre_type"])
     validate_lengths(L, R)
 
-    L_chainage = L.measurements_with_chainage(runway_length, starting_point)
-    R_chainage = R.measurements_with_chainage(runway_length, starting_point)
+    L.runway_length = runway_length
+    R.runway_length = runway_length
+    L.starting_point = starting_point
+    R.starting_point = starting_point
+
+    L_chainage = L.measurements_with_chainage
+    R_chainage = R.measurements_with_chainage
     L_chainage = L_chainage[L_chainage["Distance"] != 0]
     R_chainage = R_chainage[R_chainage["Distance"] != 0]
     L_chainage = L_chainage.reset_index(drop=True)

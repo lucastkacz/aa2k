@@ -3,3 +3,7 @@ __pycache__
 env
 data
 output
+dist
+build
+*.egg-info
+```

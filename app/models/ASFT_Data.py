@@ -85,8 +85,84 @@ class ASFT_Data:
         return self._measurements()
 
     @property
-    def key(self) -> str:
+    def measurements_with_chainage(self) -> pd.DataFrame:
+        """
+        Aligns the measurements table with the corresponding chainage of the runway, measured from left to right.
+
+        This function takes runway numbering and runway length as inputs, calculates the chainage table, and then aligns
+        the measurements data with the corresponding chainage values based on the starting point. The chainage values are
+        measured from left to right, starting from the runway numbers that are between 01 and 18. The resulting DataFrame
+        contains the Key, chainage, and measurements columns.
+
+        Args:
+            data (ASFT_Data): An instance of the ASFT_Data class, which contains the runway numbering, key, and measurements.
+            runway_length (int): The total length of the runway, which should be a positive integer value.
+            starting_point (int): The chainage value where the measurements data should start aligning, referenced
+                                from the runway numbers between 01 and 18.
+
+        Returns:
+                Chainage  Distance  Friction  Speed  Av. Friction 100m
+            0        2200         0      0.00      0                0.0
+            1        2190         0      0.00      0                0.0
+            2        2180         0      0.00      0                0.0
+            3        2170        10      0.84     62                0.0
+            4        2160        20      0.82     63                0.0
+            ..        ...       ...       ...    ...                ...
+            216        40         0      0.00      0                0.0
+
+        Raises:
+            ValueError: If the measurements table overflows the chainage table. This error suggests adjusting the starting
+                        point or the runway length.
+
+
+            |=============|===================================================================|=============|
+            | -> -> -> -> |11   ===   ===   ===   ===   [  RWY  ]   ===   ===   ===   ===   29| <- <- <- <- |
+            |=============|===================================================================|=============|
+
+            |...............................................................................................| chainage
+            [ ORIGIN ]                                                                             [ LENGTH ]
+
+
+                          |.................................................................................| starting point from header 11
+                          [ START ] -> -> -> -> -> -> -> -> -> -> -> -> -> ->-> -> -> -> -> -> -> -> -> -> ->
+
+
+                                                                                              |.............| starting point from header 29
+            <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <-  [ START ]
+
+        """
+
+        if not self._runway_length or not self._starting_point:
+            raise ValueError("Please set the runway length and starting point before calling this function.")
+
+        numbering = int(self.numbering)
+        reverse = True if 19 <= numbering <= 36 else False if 1 <= numbering <= 18 else None
+
+        chainage = self._chainage_table(self._runway_length, reversed=reverse)
+
+        start_index = chainage[chainage["Chainage"] == self._starting_point].index[0]
+
+        if start_index + len(self.measurements) > len(chainage):
+            raise ValueError(
+                "The measurements table overflows the chainage table. Please adjust the starting point or the runway length."
+            )
+
+        for col in self.measurements.columns:
+            if col not in chainage.columns:
+                chainage[col] = 0
+
+            for i, value in enumerate(self.measurements[col]):
+                chainage.at[start_index + i, col] = value
+
+        return chainage
+
+    @property
+    def key_1(self) -> str:
         return f'{self.date.strftime("%y%m%d%H%M")}{self.iata}{self.numbering}{self.side}{self.separation}'
+
+    @property
+    def key_2(self) -> str:
+        return f"{self.iata}{self.runway}"
 
     @property
     def configuration(self) -> str:
@@ -229,71 +305,6 @@ class ASFT_Data:
     @runway_material.setter
     def runway_material(self, value: str):
         self._runway_material = value
-
-    def measurements_with_chainage(self) -> pd.DataFrame:
-        """
-        Aligns the measurements table with the corresponding chainage of the runway, measured from left to right.
-
-        This function takes runway numbering and runway length as inputs, calculates the chainage table, and then aligns
-        the measurements data with the corresponding chainage values based on the starting point. The chainage values are
-        measured from left to right, starting from the runway numbers that are between 01 and 18. The resulting DataFrame
-        contains the Key, chainage, and measurements columns.
-
-        Args:
-            data (ASFT_Data): An instance of the ASFT_Data class, which contains the runway numbering, key, and measurements.
-            runway_length (int): The total length of the runway, which should be a positive integer value.
-            starting_point (int): The chainage value where the measurements data should start aligning, referenced
-                                from the runway numbers between 01 and 18.
-
-        Returns:
-            pd.DataFrame: A pandas DataFrame containing the Key, chainage, and measurements columns, where the measurements
-            data is aligned with the corresponding chainage values based on the starting point.
-
-        Raises:
-            ValueError: If the measurements table overflows the chainage table. This error suggests adjusting the starting
-                        point or the runway length.
-
-
-            |=============|===================================================================|=============|
-            | -> -> -> -> |11   ===   ===   ===   ===   [  RWY  ]   ===   ===   ===   ===   29| <- <- <- <- |
-            |=============|===================================================================|=============|
-
-            |...............................................................................................| chainage
-            [ ORIGIN ]                                                                             [ LENGTH ]
-
-
-                          |.................................................................................| starting point from header 11
-                          [ START ] -> -> -> -> -> -> -> -> -> -> -> -> -> ->-> -> -> -> -> -> -> -> -> -> ->
-
-
-                                                                                              |.............| starting point from header 29
-            <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <- <-  [ START ]
-
-        """
-
-        if not self._runway_length or not self._starting_point:
-            raise ValueError("Please set the runway length and starting point before calling this function.")
-
-        numbering = int(self.numbering)
-        reverse = True if 19 <= numbering <= 36 else False if 1 <= numbering <= 18 else None
-
-        chainage = self._chainage_table(self._runway_length, reversed=reverse)
-
-        start_index = chainage[chainage["Chainage"] == self._starting_point].index[0]
-
-        if start_index + len(self.measurements) > len(chainage):
-            raise ValueError(
-                "The measurements table overflows the chainage table. Please adjust the starting point or the runway length."
-            )
-
-        for col in self.measurements.columns:
-            if col not in chainage.columns:
-                chainage[col] = 0
-
-            for i, value in enumerate(self.measurements[col]):
-                chainage.at[start_index + i, col] = value
-
-        return chainage
 
     def _friction_measure_report(self) -> pd.DataFrame:
         """

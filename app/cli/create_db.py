@@ -1,5 +1,5 @@
 from app.utils.functions.util_functions import concurrent_ASFT
-from app.utils.db import add_data_to_db
+from app.utils.excel_db import add_data_to_db
 
 from pathlib import Path as pathlib_Path
 from inquirer import prompt, List, Path, Text
@@ -11,6 +11,7 @@ from yaspin import yaspin
 def main():
     folder_path_question = Path("folder_path", message="Carpeta de mediciones", exists=True)
     db_file_question = Path("db_file", message="Archivo de base de datos")
+
     runway_length_question = Text("runway_length", message="Longitud de la pista (múltiplos de 10):")
     starting_point_1_question = Text(
         "starting_point_1", message="Punto de inicio para cabecera ∈ [01 - 18] (múltiplos de 10):"

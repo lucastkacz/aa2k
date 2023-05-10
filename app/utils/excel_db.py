@@ -8,10 +8,10 @@ from pathlib import Path
 
 
 def measurements_table(data: ASFT_Data) -> pd.DataFrame:
-    measurements = data.measurements_with_chainage()
+    measurements = data.measurements_with_chainage
     measurements_df = pd.DataFrame(
         {
-            "key": data.key,
+            "key_1": data.key_1,
             "chainage": measurements["Chainage"],
             "distance": measurements["Distance"],
             "friction": measurements["Friction"],
@@ -26,7 +26,8 @@ def measurements_table(data: ASFT_Data) -> pd.DataFrame:
 def information_table(data: ASFT_Data) -> pd.DataFrame:
     return pd.DataFrame(
         {
-            "key": [data.key],
+            "key_1": [data.key_1],
+            "key_2": [data.key_2],
             "date": [data.date],
             "iata": [data.iata],
             "numbering": [data.numbering],
@@ -62,7 +63,7 @@ def add_data_to_db(data: ASFT_Data, excel_file: Union[str, Path]):
     if file_path.exists():
         existing_information_table = pd.read_excel(excel_file, sheet_name="Information")
 
-        if any(information["key"].isin(existing_information_table["key"])):
+        if any(information["key_1"].isin(existing_information_table["key_1"])):
             raise Exception("The key already exists in the database.")
 
     append_dataframe_to_excel(measurements, excel_file, "Measurements")
