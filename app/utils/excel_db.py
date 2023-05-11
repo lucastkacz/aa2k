@@ -17,6 +17,7 @@ def measurements_table(data: ASFT_Data) -> pd.DataFrame:
             "friction": measurements["Friction"],
             "speed": measurements["Speed"],
             "av. friction 100m": measurements["Av. Friction 100m"],
+            "color code": measurements["Color Code"],
         }
     )
 

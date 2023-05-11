@@ -82,6 +82,7 @@ class ASFT_Data:
         """
         df = self._measurements()
         df["Av. Friction 100m"] = self._rolling_average(df["Friction"])
+        df["Color Code"] = self._color_assignment(df["Av. Friction 100m"])
         return self._measurements()
 
     @property
@@ -427,6 +428,44 @@ class ASFT_Data:
             pd.Series: A pandas series with the rounded rolling average values.
         """
         return series.rolling(window=window_size, center=center).mean().fillna(0).round(digits)
+
+    def _color_assignment(self, series: pd.Series) -> pd.Series:
+        """
+        Assign a color to each friction average in a given pandas series based on the friction average,
+        and propagate 'red' color to a window of 5 positions before and after each 'red' friction average.
+
+        The color assignment rules are as follows:
+        - None for friction average equal to 0.0
+        - 'red' for friction average less than 0.5
+        - 'yellow' for friction average less than 0.6 but not less than 0.5
+        - 'green' otherwise
+
+        Args:
+            series (pd.Series): The input pandas series of friction averages for which the color is to be assigned.
+
+        Returns:
+            pd.Series: A pandas series with assigned colors, where 'red' color is propagated
+            to 5 positions before and after each 'red' friction average.
+        """
+
+        def color_assign(friction_average):
+            if friction_average == 0.0:
+                return "grey"
+            elif friction_average < 0.5:
+                return "red"
+            elif friction_average < 0.6:
+                return "yellow"
+            else:
+                return "green"
+
+        new_column = series.apply(color_assign)
+
+        mask = new_column == "red"
+        for i in range(-5, 5):
+            mask |= new_column.shift(i) == "red"
+        new_column.loc[mask] = "red"
+
+        return new_column
 
     def _chainage_table(self, runway_length: int, step: int = 10, reversed: bool = False) -> pd.DataFrame:
         """
