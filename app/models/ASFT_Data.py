@@ -1,6 +1,6 @@
 import pandas as pd
 import datetime
-import pathlib
+from pathlib import Path
 import camelot
 import re
 
@@ -10,14 +10,14 @@ from typing import Optional, NamedTuple
 class RunwayConfig(NamedTuple):
     iata: str
     numbering: int
-    side: str
+    relative_side: str
     separation: int
 
 
 class ASFT_Data:
     DATE_FORMAT = "%y-%m-%d %H:%M:%S"
 
-    def __init__(self, file_path: pathlib.Path) -> None:
+    def __init__(self, file_path: Path) -> None:
         self.filename: str = file_path.stem
         self.table = camelot.read_pdf(str(file_path), pages="all")
 
@@ -155,11 +155,13 @@ class ASFT_Data:
             for i, value in enumerate(self.measurements[col]):
                 chainage.at[start_index + i, col] = value
 
+        chainage["Color Code"] = chainage["Color Code"].replace(0, "white")
+
         return chainage
 
     @property
     def key_1(self) -> str:
-        return f'{self.date.strftime("%y%m%d%H%M")}{self.iata}{self.numbering}{self.side}{self.separation}'
+        return f'{self.date.strftime("%y%m%d%H%M")}{self.iata}{self.numbering}{self.relative_side}{self.separation}'
 
     @property
     def key_2(self) -> str:
@@ -224,9 +226,19 @@ class ASFT_Data:
         return f"{config.numbering:02d}"
 
     @property
-    def side(self) -> str:
+    def relative_side(self) -> str:
         config = self._get_configuration(self.friction_measure_report["Configuration"][0])
-        return config.side
+        return config.relative_side
+
+    @property
+    def side(self) -> str:
+        if int(self.numbering) <= 18:
+            return self.relative_side
+        else:
+            if self.relative_side == "L":
+                return "R"
+            elif self.relative_side == "R":
+                return "L"
 
     @property
     def separation(self) -> str:
@@ -365,21 +377,21 @@ class ASFT_Data:
 
     def _get_configuration(self, configuration: str) -> RunwayConfig:
         """
-        Extract runway configuration details (IATA code, runway numbering, side and separation) from a given string and return
+        Extract runway configuration details (IATA code, runway numbering, relative_side and separation) from a given string and return
         a RunwayConfig object.
 
         Args:
             configuration (str): A string containing the runway configuration information.
 
         Returns:
-            RunwayConfig: A RunwayConfig object with the extracted IATA airport code, runway numbering, side, and separation value.
+            RunwayConfig: A RunwayConfig object with the extracted IATA airport code, runway numbering, relative_side, and separation value.
         """
         iata: str = re.findall(r"^[A-Z]{3}", configuration)[0]
         numbering: int = int(re.findall(r"(?<=RWY)\d{2}|(?<!RWY)\d{2}(?=\s)", configuration)[0])
         temp: str = re.findall(r"[A-Z][0-9]", configuration)[-1]
-        side: str = temp[0]
+        relative_side: str = temp[0]
         separation: int = int(temp[1])
-        return RunwayConfig(iata, numbering, side, separation)
+        return RunwayConfig(iata, numbering, relative_side, separation)
 
     def _parse_date(self, date: str, format: str = DATE_FORMAT) -> datetime.datetime:
         """
@@ -450,7 +462,7 @@ class ASFT_Data:
 
         def color_assign(friction_average):
             if friction_average == 0.0:
-                return "grey"
+                return "white"
             elif friction_average < 0.5:
                 return "red"
             elif friction_average < 0.6:
